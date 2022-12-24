@@ -22,6 +22,9 @@ struct Token {
 	char *str;	 // string value of token
 };
 
+// Input program as String
+char *user_input;
+
 // Current Token
 Token *token;
 
@@ -32,6 +35,20 @@ void error(char *fmt, ...) {
 	vfprintf(stderr, fmt, ap);
 	fprintf(stderr, "\n");
 	exit(1);
+}
+
+void error_at(char *loc, char *fmt, ...) {
+	va_list ap;
+	va_start(ap, fmt);
+
+	int pos = loc - user_input;
+	fprintf(stderr, "%s\n", user_input);
+	fprintf(stderr, "%*s", pos, "");		// print pos number of spaces
+	fprintf(stderr, "^ ");
+	vfprintf(stderr, fmt, ap);
+	fprintf(stderr, "\n");
+	exit(1);
+
 }
 
 // Consumes the current toke if it matches 'op'.
@@ -46,7 +63,7 @@ bool consume(char op) {
 // Ensure that the current token is 'op'
 void expect(char op) {
 	if (token->kind != TK_RESERVED || token->str[0] != op) {
-		error("'%c' is not", op);
+		error_at(token->str, "expected %c", op);
 	}
 	token = token->next;
 }
@@ -54,7 +71,7 @@ void expect(char op) {
 // Ensures that current token is Integer
 int expect_number() {
 	if (token->kind != TK_NUM) {
-		error("token kind number expected");
+		error_at(token->str, "token kind number expected");
 	}
 	int val = token->val;
 	token = token->next;
@@ -74,8 +91,9 @@ Token *new_token(TokenKind kind, Token *cur, char *str) {
 	return tok;
 }
 
-// Tokenize 'p' and returns new token
-Token *tokenize(char *p) {
+// Tokenize user input and returns new token
+Token *tokenize() {
+	char *p = user_input;
 	Token head;
 	head.next = NULL;
 	Token *cur = &head;
@@ -101,7 +119,7 @@ Token *tokenize(char *p) {
 			continue;
 		}
 
-		error("Tokenizer Error: can't tokenize");
+		error_at(p, "expected a number");
 	}
 
 	new_token(TK_EOF, cur, p);
@@ -114,7 +132,8 @@ int main(int argc, char **argv) {
 		return 1;
 	}
 
-	token = tokenize(argv[1]);
+	user_input = argv[1];
+	token = tokenize();
 
 	printf(".intel_syntax noprefix\n");
 	printf(".global main\n");
